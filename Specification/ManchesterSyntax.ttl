@@ -129,8 +129,10 @@ construct {
         manchester:type 'CLASS';
         manchester:label ?manchesterLabel.
 } where {
-
-  BIND(IF(isBlank($this),"Anonymous class",CONCAT("[=",function:getLabel($this),"=]")) as ?manchesterLabel)
+  BIND(IF(isBlank($this),
+	  "Anonymous class"@en,
+	  STRLANG(CONCAT("[=",function:getLabel($this),"=]"), LANG(function:getLabel($this)))) as ?manchesterLabel)
+  
 } 
 '''.
 
@@ -210,12 +212,14 @@ construct {
   # Get the labels for the class and property
   ?someClass manchester:label ?classLabel.
   ?someProperty manchester:label ?propertyLabel.
+  FILTER(LANG(?classLabel) = LANG(?propertyLabel))
   
   # Establish the full description of the OWL restriction class to be serialized.
-  BIND(CONCAT(?propertyLabel, " only ", ?classLabel) as ?manchesterDescription)
+  BIND(CONCAT(?propertyLabel, " only ", ?classLabel) as ?manchesterString)
+  BIND(STRLANG(?manchesterString, LANG(?classLabel)) as ?manchesterDescription)
     
   # Establish the label for the owl class. If a blank node, then use the description of the class als label. If an IRI, then use the preferred label.
-  BIND(IF(isBlank($this), ?manchesterDescription, CONCAT("[=",function:getLabel($this), "=]")) as ?manchesterLabel)
+  BIND(IF(isBlank($this), ?manchesterDescription, STRLANG(CONCAT("[=",function:getLabel($this), "=]"), LANG(function:getLabel($this)))) as ?manchesterLabel)
   
   # If the class is defined in the ontology with a IRI, then add the definition to it. If the class is a blank node, do not bother.
   BIND(IF(isBlank($this), ?unboundDummy, ?manchesterDescription) as ?equivalentTo)
@@ -383,24 +387,22 @@ construct {
   $this owl:hasValue ?someIndividual;
         owl:onProperty ?someProperty.
   
+  OPTIONAL
   # Get the labels for the individual and property
-  {?someIndividual manchester:label ?individualLabel.}
-  UNION
-  {FILTER NOT EXISTS {  $this owl:hasValue ?someIndividual. 
-     ?someIndividual ?anyPredicate []}
-   BIND(STR(?someIndividual) as ?individualLabel)}
- 
-  {?someProperty manchester:label ?propertyLabel.}
-    UNION
-  {FILTER NOT EXISTS {  $this owl:onProperty ?someProperty. 
-      ?someProperty ?anyPredicate []}
-    BIND(STR(?someProperty) as ?individualLabel)}
+  {?someIndividual manchester:label ?originalIndividualLabel.}
+  BIND(COALESCE(?originalIndividualLabel, STRLANG(STR(?someIndividual), 'en')) as ?individualLabel)
+  
+  OPTIONAL
+  {?someProperty manchester:label ?originalPropertyLabel.}
+  BIND(COALESCE(?originalPropertyLabel, STRLANG(STR(?someProperty), 'en')) as ?propertyLabel)
+  
+  FILTER (LANG(?propertyLabel) = LANG(?individualLabel))
   
   # Establish the full description of the OWL restriction class to be serialized.
-  BIND(CONCAT(?propertyLabel, " value ", ?individualLabel) as ?manchesterDescription)
+  BIND(STRLANG(CONCAT(?propertyLabel, " value ", ?individualLabel),LANG(?individualLabel)) as ?manchesterDescription)
     
   # Establish the label for the owl class. If a blank node, then use the description of the class als label. If an IRI, then use the preferred label.
-  BIND(IF(isBlank($this), ?manchesterDescription, CONCAT("[=",function:getLabel($this), "=]")) as ?manchesterLabel)
+  BIND(IF(isBlank($this), ?manchesterDescription, STRLANG(CONCAT("[=",function:getLabel($this), "=]"), LANG(function:getLabel($this)))) as ?manchesterLabel)
   
   # If the class is defined in the ontology with a IRI, then add the definition to it. If the class is a blank node, do not bother.
   BIND(IF(isBlank($this), ?unboundDummy, ?manchesterDescription) as ?equivalentTo)
@@ -472,10 +474,11 @@ construct {
   ?someProperty manchester:label ?labelProperty.
   
   # Get the defining label
-  BIND(CONCAT(?labelProperty, " exactly ", str(?n)) as ?manchesterDescription)
+  BIND(CONCAT(?labelProperty, " exactly ", str(?n)) as ?manchesterString)
+  BIND(STRLANG(?manchesterString, LANG(?labelProperty)) as ?manchesterDescription)
  
   # Establish the label for the owl class. If a blank node, then use the description of the class als label. If an IRI, then use the preferred label.
-  BIND(IF(isBlank($this), ?manchesterDescription, CONCAT("[=",function:getLabel($this), "=]")) as ?manchesterLabel)
+  BIND(IF(isBlank($this), ?manchesterDescription, STRLANG(CONCAT("[=",function:getLabel($this), "=]"), LANG(function:getLabel($this)))) as ?manchesterLabel)
   
   # If the class is defined in the ontology with a IRI, then add the definition to it. If the class is a blank node, do not bother.
   BIND(IF(isBlank($this), ?unboundDummy, ?manchesterDescription) as ?equivalentTo)
@@ -546,10 +549,11 @@ construct {
   ?someProperty manchester:label ?labelProperty.
   
   # Get the defining label
-  BIND(CONCAT(str(?labelProperty), " max ", str(?n)) as ?manchesterDescription)
+  BIND(CONCAT(str(?labelProperty), " max ", str(?n)) as ?manchesterString)
+  BIND(STRLANG(?manchesterString, LANG(?labelProperty)) as ?manchesterDescription)
   
   # Establish the label for the owl class. If a blank node, then use the description of the class als label. If an IRI, then use the preferred label.
-  BIND(IF(isBlank($this), ?manchesterDescription, CONCAT("[=",function:getLabel($this), "=]")) as ?manchesterLabel)
+  BIND(IF(isBlank($this), ?manchesterDescription, STRLANG(CONCAT("[=",function:getLabel($this), "=]"), LANG(function:getLabel($this)))) as ?manchesterLabel)
   
   # If the class is defined in the ontology with a IRI, then add the definition to it. If the class is a blank node, do not bother.
   BIND(IF(isBlank($this), ?unboundDummy, ?manchesterDescription) as ?equivalentTo)
@@ -620,10 +624,11 @@ construct {
   ?someProperty manchester:label ?labelProperty.
   
   # Get the manhest
-  BIND(CONCAT(str(?labelProperty), " min ", str(?n)) as ?manchesterDescription)
- 
+  BIND(CONCAT(str(?labelProperty), " min ", str(?n)) as ?manchesterString)
+  BIND(STRLANG(?manchesterString, LANG(?labelProperty)) as ?manchesterDescription)
+  
   # Establish the label for the owl class. If a blank node, then use the description of the class als label. If an IRI, then use the preferred label.
-  BIND(IF(isBlank($this), ?manchesterDescription, CONCAT("[=",function:getLabel($this), "=]")) as ?manchesterLabel)
+  BIND(IF(isBlank($this), ?manchesterDescription, STRLANG(CONCAT("[=",function:getLabel($this), "=]"),LANG(function:getLabel($this)))) as ?manchesterLabel)
   
   # If the class is defined in the ontology with a IRI, then add the definition to it. If the class is a blank node, do not bother.
   BIND(IF(isBlank($this), ?unboundDummy, ?manchesterDescription) as ?equivalentTo)
@@ -692,11 +697,11 @@ construct {
   UNION
   {$this rdfs:subClassOf ?superClass.
   FILTER NOT EXISTS {?superClass ?anyPredicate [].}
-  BIND(function:getLabel(?superClass) as ?manchesterDescription)
+  BIND(STRLANG(function:getLabel(?superClass), 'en') as ?manchesterDescription)
   }
   
   # Establish the label for the owl class. If a blank node, then use the description of the class als label, including manchester syntax 'subclass' notation. If an IRI, then use the preferred label.
-  BIND(IF(isBlank($this), CONCAT("SubClassOf: ",?manchesterDescription), CONCAT("[=",function:getLabel($this), "=]")) as ?manchesterLabel)
+  BIND(IF(isBlank($this), STRLANG(CONCAT("SubClassOf: ",?manchesterDescription), LANG(?manchesterDescription)), STRLANG(CONCAT("[=",function:getLabel($this), "=]"), LANG(function:getLabel($this)))) as ?manchesterLabel)
   
   # If the class is explicitly defined in the ontology with a IRI, then add the definition to it. If the class is a blank node, do not bother.
   BIND(IF(isBlank($this), ?unboundDummy, ?manchesterDescription) as ?subClassOf)
@@ -765,11 +770,11 @@ construct {
   UNION
   {$this owl:equivalentClass ?equivalentClass.
   FILTER NOT EXISTS {?superClass ?anyPredicate [].}
-  BIND(function:getLabel(?superClass) as ?manchesterDescription)
+  BIND(STRLANG(function:getLabel(?superClass), LANG(function:getLabel(?superClass))) as ?manchesterDescription)
   }
   
   # Establish the label for the owl class. If a blank node, then use the description of the class als label, including manchester syntax 'EquivalentTo' notation. If an IRI, then use the preferred label.
-  BIND(IF(isBlank($this), CONCAT("EquivalentTo: ",?manchesterDescription), CONCAT("[=",function:getLabel($this), "=]")) as ?manchesterLabel)
+  BIND(IF(isBlank($this), STRLANG(CONCAT("EquivalentTo: ",?manchesterDescription), LANG(?manchesterDescription)), STRLANG(CONCAT("[=",function:getLabel($this), "=]"), LANG(function:getLabel($this)))) as ?manchesterLabel)
   
   # If the class is explicitly defined in the ontology with a IRI, then add the definition to it. If the class is a blank node, do not bother.
   BIND(IF(isBlank($this), ?unboundDummy, ?manchesterDescription) as ?equivalentTo)
@@ -1762,15 +1767,13 @@ function:getLabel
     sh:select """
        SELECT ?result WHERE {
   
-  BIND(REPLACE(STR($resource),'.*[/#]','') as ?implicitLabel)
+  BIND(STRLANG(REPLACE(STR($resource),'.*[/#]',''),'en') as ?implicitLabel)
   
   OPTIONAL
-  {$resource skos:prefLabel ?preferredLabel.
-  FILTER (lang(?preferredLabel) = 'en')}
+  {$resource skos:prefLabel ?preferredLabel.}
   
   OPTIONAL 
-  {$resource rdfs:label ?alternativeLabel.
-  FILTER (lang(?alternativeLabel) = 'en')}
+  {$resource rdfs:label ?alternativeLabel.}
       
   # Establish label
   BIND(COALESCE(?preferredLabel, ?alternativeLabel, ?implicitLabel) as ?result)

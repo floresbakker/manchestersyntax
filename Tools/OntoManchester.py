@@ -22,7 +22,7 @@ import rdflib
 from rdflib import Namespace
 
 # Set the path to the desired standard directory. 
-directory_path = "H:/Mijn Documenten/Branches/"
+directory_path = "C:/Users/Administrator/Documents/Branches/"
 
 # namespace declaration
 manchester = Namespace("https://data.rijksfinancien.nl/manchester/model/def/")
