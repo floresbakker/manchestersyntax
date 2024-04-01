@@ -840,21 +840,25 @@ construct {
         
 } where {
 
-  {select (group_concat(?label;separator=' or ') as ?manchesterDescription) where {
+  {SELECT ?lang (GROUP_CONCAT(?label;SEPARATOR=' or ') AS ?manchesterLangDescription) WHERE {
   $this owl:unionOf/rdf:rest*/rdf:first ?listItem.
   
   # Add internal classes that are defined in this ontology
-  {?listItem manchester:label ?label.}
+  {?listItem manchester:label ?label.
+  BIND(LANG(?label) as ?lang)}
+    
   UNION
   # Also add external classes that are not defined in any triple in this ontology
   {FILTER NOT EXISTS {?listItem ?anyPredicate []}
-  BIND(IF(isBlank($this),?unboundDummy,function:getLabel(?listItem)) as ?label)
+  BIND(IF(isBlank($this),?unboundDummy,?listItem) as ?label)
     }
    }
+  GROUP BY ?lang
   }
+  BIND(STRLANG(?manchesterLangDescription, ?lang) as ?manchesterDescription)
   
   # Establish the label for the owl class. If a blank node, then use the description of the class als label, including manchester syntax ' or ' notation. If an IRI, then use the preferred label.
-  BIND(IF(isBlank($this), ?manchesterDescription, CONCAT("[=",function:getLabel($this), "=]")) as ?manchesterLabel)
+  BIND(IF(isBlank($this), ?manchesterDescription, STRLANG(CONCAT("[=",function:getLabel($this), "=]"), ?lang)) as ?manchesterLabel)
   
   # If the class is explicitly defined in the ontology with a IRI, then add the definition to it. If the class is a blank node, do not bother.
   BIND(IF(isBlank($this), ?unboundDummy, ?manchesterDescription) as ?equivalentTo) 
@@ -920,20 +924,26 @@ construct {
         
 } where {
 
-  {select (group_concat(?label;separator=' and ') as ?manchesterDescription) where {
+  {select ?lang (group_concat(?label;separator=' and ') as ?manchesterLangDescription) where {
   $this owl:intersectionOf/rdf:rest*/rdf:first ?listItem.
+  
   # Add internal classes that are defined in this ontology
-  {?listItem manchester:label ?label.}
+  {?listItem manchester:label ?label.
+  BIND(LANG(?label) as ?lang)}
+  
   UNION
   # Also add external classes that are not defined in any triple in this ontology
   {FILTER NOT EXISTS {?listItem ?anyPredicate []}
   BIND(IF(isBlank($this),?unboundDummy,function:getLabel(?listItem)) as ?label)
       }
     }
+  GROUP BY ?lang
   }
   
+  BIND(STRLANG(?manchesterLangDescription, ?lang) as ?manchesterDescription)
+  
   # Establish the label for the owl class. If a blank node, then use the description of the class als label, including manchester syntax ' and ' notation. If an IRI, then use the preferred label.
-  BIND(IF(isBlank($this), ?manchesterDescription, CONCAT("[=",function:getLabel($this), "=]")) as ?manchesterLabel)
+  BIND(IF(isBlank($this), ?manchesterDescription, STRLANG(CONCAT("[=",function:getLabel($this), "=]"), ?lang)) as ?manchesterLabel)
   
   # If the class is explicitly defined in the ontology with a IRI, then add the definition to it. If the class is a blank node, do not bother.
   BIND(IF(isBlank($this), ?unboundDummy, ?manchesterDescription) as ?equivalentTo) 
@@ -999,15 +1009,17 @@ construct {
   
 } where {
 
-  {select (group_concat(?label;separator=' ') as ?individualLabels) where {
+  {select ?lang (group_concat(?label;separator=' ') as ?individualLabels) where {
   $this owl:oneOf/rdf:rest*/rdf:first/manchester:label ?label.
+  BIND(LANG(?label) as ?lang)
     }
+  GROUP BY ?lang
   }
 
-  BIND(CONCAT("{", ?individualLabels, "}") as ?manchesterDescription)
+  BIND(STRLANG(CONCAT("{", ?individualLabels, "}"), ?lang) as ?manchesterDescription)
 
   # Establish the label for the owl class. If a blank node, then use the description of the class als label, including manchester syntax ' {} ' notation. If an IRI, then use the preferred label.
-  BIND(IF(isBlank($this), ?manchesterDescription, CONCAT("[=",function:getLabel($this), "=]")) as ?manchesterLabel)
+  BIND(IF(isBlank($this), ?manchesterDescription, STRLANG(CONCAT("[=",function:getLabel($this), "=]"), ?lang)) as ?manchesterLabel)
   
   # If the class is explicitly defined in the ontology with a IRI, then add the definition to it. If the class is a blank node, do not bother.
   BIND(IF(isBlank($this), ?unboundDummy, ?manchesterDescription) as ?equivalentTo) 
@@ -1073,17 +1085,22 @@ construct {
 } where {
 
   {$this owl:complementOf ?someClass.
-  ?someClass manchester:label ?explicitDefinition.}
+  ?someClass manchester:label ?explicitDefinition.
+  BIND(LANG(?explicitDefinition) as ?lang)}
+  
   # There may be complement classes that unfortunately do not get defined in the turtle file. 
   UNION { 
   $this owl:complementOf ?someClass.
+  FILTER NOT EXISTS { ?someClass ?anyPredicate []}
   BIND(function:getLabel(?someClass) as ?implicitDefinition)
+  BIND(LANG(function:getLabel($this)) as ?lang)
   }
+  
   # Get the label of the class to be serialized.
-  BIND(CONCAT("not ", str(COALESCE(?explicitDefinition, ?implicitDefinition))) as ?manchesterDescription)
+  BIND(STRLANG(CONCAT("not ", str(COALESCE(?explicitDefinition, ?implicitDefinition))), ?lang) as ?manchesterDescription)
   
   # Establish the label for the owl class. If a blank node, then use the description of the class als label, including manchester syntax 'not ' notation. If an IRI, then use the preferred label.
-  BIND(IF(isBlank($this), ?manchesterDescription, CONCAT("[=",function:getLabel($this), "=]")) as ?manchesterLabel)
+  BIND(IF(isBlank($this), ?manchesterDescription, STRLANG(CONCAT("[=",function:getLabel($this), "=]"), ?lang)) as ?manchesterLabel)
   
   # If the class is explicitly defined in the ontology with a IRI, then add the definition to it. If the class is a blank node, do not bother.
   BIND(IF(isBlank($this), ?unboundDummy, ?manchesterDescription) as ?equivalentTo) 
@@ -1155,20 +1172,20 @@ construct {
 } where {
 
   # Label of RDF property
-  {BIND(CONCAT("[=",function:getLabel($this),"=]") as ?manchesterLabel)}
+   BIND(LANG(function:getLabel($this)) as ?lang)
+   BIND(STRLANG(CONCAT("[=",function:getLabel($this),"=]"), ?lang) as ?manchesterLabel)
   
   # Domain
   OPTIONAL
   {
-  
     {$this rdfs:domain ?domainClass.
-    ?domainClass manchester:label ?explicitDomain.}
-    
+    ?domainClass manchester:label ?explicitDomain.
+	} 
     UNION
     {
     $this rdfs:domain ?domainClass.
     FILTER NOT EXISTS {?domainClass ?anyPredicate []} 
-    BIND(IF(isBlank(?domainClass), ?unboundDummy, function:getLabel(?domainClass)) as ?implicitDomain)
+    BIND(IF(isBlank(?domainClass), ?unboundDummy, STRLANG(function:getLabel(?domainClass), LANG(function:getLabel($this)))) as ?implicitDomain)
     }
   }
   BIND(COALESCE(?explicitDomain, ?implicitDomain) as ?manchesterDomain)
@@ -1184,7 +1201,7 @@ construct {
    {
    $this rdfs:range ?rangeClass.
    FILTER NOT EXISTS {?rangeClass ?anyPredicate []}
-   BIND(IF(isBlank(?rangeClass), ?unboundDummy, function:getLabel(?rangeClass)) as ?implicitRange)
+   BIND(IF(isBlank(?rangeClass), ?unboundDummy, STRLANG(function:getLabel(?rangeClass), LANG(function:getLabel($this)))) as ?implicitRange)
     }
   }
 BIND(COALESCE(?explicitRange, ?implicitRange) as ?manchesterRange)
@@ -1251,7 +1268,9 @@ construct {
 
 
   # Label of datatype property
-  {BIND(CONCAT("[=",function:getLabel($this),"=]") as ?manchesterLabel)}
+  
+  BIND(LANG(function:getLabel($this)) as ?lang)
+  BIND(STRLANG(CONCAT("[=",function:getLabel($this),"=]"), ?lang) as ?manchesterLabel)
   
  # Domain
   OPTIONAL
@@ -1264,7 +1283,7 @@ construct {
     {
     $this rdfs:domain ?domainClass.
     FILTER NOT EXISTS {?domainClass ?anyPredicate []} 
-    BIND(IF(isBlank(?domainClass), ?unboundDummy, function:getLabel(?domainClass)) as ?implicitDomain)
+    BIND(IF(isBlank(?domainClass), ?unboundDummy, STRLANG(function:getLabel(?domainClass), LANG(function:getLabel($this)))) as ?implicitDomain)
     }
   }
   BIND(COALESCE(?explicitDomain, ?implicitDomain) as ?manchesterDomain)
@@ -1272,7 +1291,7 @@ construct {
   # Range 
   OPTIONAL
   {$this rdfs:range ?rangeDatatype.
-  BIND(function:getPrefixedIRI(?rangeDatatype) as ?manchesterRange)
+  BIND(STRLANG(function:getPrefixedIRI(?rangeDatatype), LANG(function:getLabel($this))) as ?manchesterRange)
   }
 }  
 '''.
@@ -1341,8 +1360,9 @@ construct {
 
 } where {
 
-    # Label of RDF property
-  {BIND(CONCAT("[=",function:getLabel($this),"=]") as ?manchesterLabel)}
+  # Label of object property
+  BIND(LANG(function:getLabel($this)) as ?lang)
+  BIND(STRLANG(CONCAT("[=",function:getLabel($this),"=]"), ?lang) as ?manchesterLabel)
   
   # Domain
   OPTIONAL
@@ -1355,7 +1375,7 @@ construct {
     {
     $this rdfs:domain ?domainClass.
     FILTER NOT EXISTS {?domainClass ?anyPredicate []} 
-    BIND(IF(isBlank(?domainClass), ?unboundDummy, function:getLabel(?domainClass)) as ?implicitDomain)
+    BIND(IF(isBlank(?domainClass), ?unboundDummy, STRLANG(function:getLabel(?domainClass), LANG(function:getLabel($this)))) as ?implicitDomain)
     }
   }
   BIND(COALESCE(?explicitDomain, ?implicitDomain) as ?manchesterDomain)
@@ -1371,7 +1391,7 @@ construct {
    {
    $this rdfs:range ?rangeClass.
    FILTER NOT EXISTS {?rangeClass ?anyPredicate []}
-   BIND(IF(isBlank(?rangeClass), ?unboundDummy, function:getLabel(?rangeClass)) as ?implicitRange)
+   BIND(IF(isBlank(?rangeClass), ?unboundDummy, STRLANG(function:getLabel(?rangeClass), LANG(function:getLabel($this)))) as ?implicitRange)
     }
   }
 BIND(COALESCE(?explicitRange, ?implicitRange) as ?manchesterRange)
@@ -1435,12 +1455,13 @@ construct {
 } where {
 
   $this rdfs:subPropertyOf ?superProperty.
+  
   {?superProperty manchester:label ?manchesterSuperProperty.}
   UNION
   {
   $this rdfs:subPropertyOf ?superProperty.
   FILTER NOT EXISTS {?superProperty ?anyPredicate []}
-  BIND(function:getLabel(?superProperty) as ?manchesterSuperProperty)
+  BIND(STRLANG(function:getLabel(?superProperty), LANG(function:getLabel($this))) as ?manchesterSuperProperty)
   }
 }  
 '''.
@@ -1501,12 +1522,13 @@ construct {
 } where {
 
   $this owl:equivalentProperty ?equivalentProperty.
+  BIND(LANG(function:getLabel($this)) as ?lang)
   
   {?equivalentProperty manchester:label ?manchesterEquivalentProperty.}
   UNION
   {$this owl:equivalentProperty ?equivalentProperty.
   FILTER NOT EXISTS {?equivalentProperty ?anyPredicate []}
-  BIND(function:getLabel(?equivalentProperty) as ?manchesterEquivalentProperty)
+  BIND(STRLANG(function:getLabel(?equivalentProperty), ?lang) as ?manchesterEquivalentProperty)
   } 
 }  
 '''.
@@ -1544,7 +1566,9 @@ select $this {
      ?class manchester:label []
     }
   }
-# Make sure to only query instantiations of classes, and not ontologies, classes, complex classes, properties, annotations, SHACL shapes nor SKOS concepts
+
+# Make sure to only query instantiations of classes, and not ontologies, classes, complex classes, properties, annotations, SHACL shapes nor SKOS concepts:
+
 FILTER (?class NOT IN (sh:PropertyShape, sh:NodeShape, sh:SPARQLRule, sh:SPARQLTarget, rdfs:Class, rdf:Property, owl:Class, owl:DatatypeProperty, owl:ObjectProperty, owl:FunctionalProperty, owl:IrreflexiveProperty, owl:Restriction, owl:Ontology, owl:InverseFunctionalProperty, owl:InverseProperty, owl:AllDifferent, owl:AnnotationProperty, owl:NegativePropertyAssertion, owl:OntologyProperty, owl:AllDisjointClasses, owl:AllDisjointProperties, owl:Annotation,owl:AsymmetricProperty, owl:Axiom, owl:DataRange, owl:DeprecatedClass, owl:DeprecatedProperty, skos:Concept, skos:ConceptScheme, skos:Collection, respec:Ontology))
 }
 '''.
@@ -1570,35 +1594,32 @@ construct {
 } where {
 
   # Label of the named individual
-  {BIND(function:getLabel($this) as ?manchesterLabel)}
   
-  # Class
-  UNION
-  {
-    $this a ?class.
-    {?class manchester:label ?className.}
-    UNION
-    {$this a ?class.
-    FILTER NOT EXISTS {?class ?anyPredicate []}
-    BIND(IF(isBlank(?class), ?unboundDummy, function:getLabel(?class)) as ?className)
-    }
-    BIND(CONCAT("Type:  ", ?className) as ?manchesterClass)    
-  }
-  # Fact 
-  UNION
-  {
-    $this ?property ?literal.
-    ?property rdf:type owl:DatatypeProperty;
+  $this a ?class.
+  BIND(function:getLabel($this) as ?manchesterLabel)
+  BIND(LANG(function:getLabel($this)) as ?lang)
+  
+  # Class description   
+  OPTIONAL
+  {  ?class manchester:label ?explicitClassName.}
+  BIND(COALESCE(?explicitClassName, function:getLabel(?class)) as ?className)
+  BIND(STRLANG(CONCAT("Type: ", ?className), LANG(function:getLabel(?class))) as ?manchesterClass)
+  
+  # Fact description
+  OPTIONAL
+  {$this ?property ?literal.
+   ?property rdf:type owl:DatatypeProperty;
               manchester:label ?propertyLabel.
   }
-  UNION
-  {
-    $this ?property ?object.
-    ?property rdf:type owl:ObjectProperty;
+  OPTIONAL
+  {$this ?property ?object.
+   ?property rdf:type owl:ObjectProperty;
               manchester:label ?propertyLabel.
-    ?object   manchester:label ?objectLabel.
+  OPTIONAL{?object   manchester:label ?explicitObjectLabel.}
+  BIND(COALESCE(?explicitObjectLabel, function:getLabel(?object)) as ?objectLabel)
+  FILTER (LANG(?propertyLabel) = LANG(?objectLabel))
   }
-  BIND(CONCAT("Fact:  ", function:getPrefixedIRI(?propertyLabel), " ", COALESCE(str(?literal), ?objectLabel)) as ?manchesterFact)
+  BIND(STRLANG(CONCAT("Fact:  ", function:getPrefixedIRI(?propertyLabel), " ", COALESCE(str(?literal), ?objectLabel)), LANG(?propertyLabel)) as ?manchesterFact)
 }
   
 """.
@@ -1655,7 +1676,7 @@ construct {
 } where {
 
   # Label of the concept scheme
-  BIND(function:getLabel($this) as ?manchesterLabel)
+  BIND(STRLANG(function:getLabel($this), LANG(function:getLabel($this))) as ?manchesterLabel)
 }
 
 """.
@@ -1709,7 +1730,7 @@ construct {
 } where {
 
   # Label of the concept 
-  BIND(function:getLabel($this) as ?manchesterLabel)
+  BIND(STRLANG(function:getLabel($this), LANG(function:getLabel($this))) as ?manchesterLabel)
 }
 
 """.
