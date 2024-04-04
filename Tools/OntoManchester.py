@@ -21,8 +21,11 @@ import pyshacl
 import rdflib 
 from rdflib import Namespace
 
+# Get the current working directory in which the Playground.py file is located.
+current_dir = os.getcwd()
+
 # Set the path to the desired standard directory. 
-directory_path = "C:/Users/Administrator/Documents/Branches/"
+directory_path = os.path.abspath(os.path.join(current_dir, '..'))
 
 # namespace declaration
 manchester = Namespace("https://data.rijksfinancien.nl/manchester/model/def/")
@@ -37,7 +40,7 @@ def readGraphFromFile(file_path):
 
 # Function to write a graph to a file
 def writeGraph(graph):
-    graph.serialize(destination=directory_path+"OntoManchester/Tools/Output/"+filename_stem+"-manchestersyntax.ttl", format="turtle")
+    graph.serialize(destination=directory_path+"/OntoManchester/Tools/Output/"+filename_stem+"-manchestersyntax.ttl", format="turtle")
 
 # Function to call the PyShacl engine so that a RDF model of an HTML document can be serialized to HTML-code.
 def iteratePyShacl(manchester_generator, serializable_graph, iterator):
@@ -187,7 +190,7 @@ WHERE {
     $this manchester:syntax 'OBJECTPROPERTY'.
   }
   filter not exists {
-    $this manchester:syntax 'SUBPROPERTYOF'.
+    $this manchester:syntax 'SUBPROPERTY'.
   }
   filter not exists {
     $this manchester:syntax 'EQUIVALENTPROPERTY'.
@@ -205,15 +208,15 @@ WHERE {
                  writeGraph(serializable_graph)
 
 # loop through any turtle files in the input directory
-for filename in os.listdir(directory_path+"OntoManchester/Tools/Input"):
+for filename in os.listdir(directory_path+"/OntoManchester/Tools/Input"):
     if filename.endswith(".ttl"):
-        file_path = os.path.join(directory_path+"OntoManchester/Tools/Input", filename)
+        file_path = os.path.join(directory_path+"/OntoManchester/Tools/Input", filename)
         
         # Establish the stem of the file name for reuse in newly created files
         filename_stem = os.path.splitext(filename)[0]
         
         # Get the manchester syntax vocabulary and place it in a string
-        manchester_generator = readGraphFromFile(directory_path+"OntoManchester/Specification/manchestersyntax.ttl")
+        manchester_generator = readGraphFromFile(directory_path+"/OntoManchester/Specification/manchestersyntax.ttl")
         
         # Get some ontology to be transformed from OWL to Manchester Syntax. The ontology needs to be placed in the input directory.
         ontology_graph = readGraphFromFile(file_path)   
